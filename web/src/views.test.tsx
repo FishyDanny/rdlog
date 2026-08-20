@@ -36,6 +36,7 @@ const experiment: ExperimentView = {
     id: "entry-1",
     kind: "observation",
     occurredAt: "2026-08-16T01:00:00.000Z",
+    occurredAtOffsetMinutes: 600,
     previousHash: null,
     sequence: 1,
   }],
@@ -81,7 +82,7 @@ describe("rdlog views", () => {
     const markup = renderToStaticMarkup(<ExperimentWorkspace
       amendmentBodies={{}}
       busy={false}
-      entryForm={{ body: "", kind: "observation", occurredAt: "2026-08-16T01:00" }}
+      entryForm={{ body: "", kind: "observation", occurredAt: "2026-08-16T01:00", occurredAtOffsetMinutes: null }}
       experiment={experiment}
       message=""
       onAmend={() => undefined}
@@ -108,7 +109,7 @@ describe("rdlog views", () => {
     const markup = renderToStaticMarkup(<ExperimentWorkspace
       amendmentBodies={{}}
       busy={false}
-      entryForm={{ body: "", kind: "observation", occurredAt: "2026-08-16T01:00" }}
+      entryForm={{ body: "", kind: "observation", occurredAt: "2026-08-16T01:00", occurredAtOffsetMinutes: null }}
       experiment={experiment}
       message=""
       onAmend={() => undefined}

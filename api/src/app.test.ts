@@ -121,9 +121,10 @@ async function appendEntry(
   experimentId: string,
   kind: string,
   body: string,
+  occurredAtOffsetMinutes: number | null = 600,
 ): Promise<RdlogEntry> {
   const response = await app.request(`/api/experiments/${experimentId}/entries`, {
-    body: JSON.stringify({ body, kind, occurredAt: "2026-08-16T01:00:00.000Z" }),
+    body: JSON.stringify({ body, kind, occurredAt: "2026-08-16T01:00:00.000Z", occurredAtOffsetMinutes }),
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     method: "POST",
   });
@@ -276,5 +277,66 @@ describe("rdlog API", () => {
     expect(future.status).toBe(400);
     expect(oneAnchor.status).toBe(400);
     expect(store.anchors).toHaveLength(0);
+  });
+  test("records the offset the recorder's clock was observing and covers it with the hash", async () => {
+    const { app, store } = createHarness();
+    const token = await createWorkspace(app);
+    const experiment = await createExperiment(app, token);
+
+    const daylightSaving = await appendEntry(
+      app,
+      token,
+      experiment.id,
+      "observation",
+      "Recorded while the recorder's clock was on daylight saving time.",
+      660,
+    );
+
+    expect(daylightSaving.occurredAtOffsetMinutes).toBe(660);
+    await expect(canonicalEntryHash(daylightSaving)).resolves.toBe(daylightSaving.hash);
+    // The same instant recorded an hour either side of a transition is a distinct record.
+    await expect(canonicalEntryHash({ ...daylightSaving, occurredAtOffsetMinutes: 600 }))
+      .resolves.not.toBe(daylightSaving.hash);
+    expect(store.entries[0]?.occurredAtOffsetMinutes).toBe(660);
+  });
+
+  test("keeps entries recorded before offsets existed verifying under the v1 hash", async () => {
+    const { app } = createHarness();
+    const token = await createWorkspace(app);
+    const experiment = await createExperiment(app, token);
+
+    const legacy = await appendEntry(app, token, experiment.id, "note", "Recorded before offsets were captured.", null);
+    const withOffset = await appendEntry(app, token, experiment.id, "note", "Recorded after offsets were captured.", 600);
+
+    expect(legacy.occurredAtOffsetMinutes).toBeNull();
+    await expect(canonicalEntryHash(legacy)).resolves.toBe(legacy.hash);
+    expect(withOffset.previousHash).toBe(legacy.hash);
+
+    const response = await app.request(`/api/experiments/${experiment.id}/export`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const pack = (await response.json()) as { hashChainValid: boolean };
+
+    expect(pack.hashChainValid).toBe(true);
+  });
+
+  test("rejects an offset that is not a whole number of minutes inside the real range", async () => {
+    const { app } = createHarness();
+    const token = await createWorkspace(app);
+    const experiment = await createExperiment(app, token);
+
+    const responses = await Promise.all([900, -900, 60.5, "600"].map((occurredAtOffsetMinutes) =>
+      app.request(`/api/experiments/${experiment.id}/entries`, {
+        body: JSON.stringify({
+          body: "A body",
+          kind: "note",
+          occurredAt: "2026-08-16T01:00:00.000Z",
+          occurredAtOffsetMinutes,
+        }),
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        method: "POST",
+      })));
+
+    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400]);
   });
 });

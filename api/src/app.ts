@@ -28,6 +28,7 @@ export interface RdlogEntry {
   id: string;
   kind: EntryKind;
   occurredAt: string;
+  occurredAtOffsetMinutes: number | null;
   previousHash: string | null;
   sequence: number;
 }
@@ -88,6 +89,7 @@ interface EntryInput {
   body: string;
   kind: EntryKind;
   occurredAt: string;
+  occurredAtOffsetMinutes: number | null;
 }
 
 interface AmendmentInput {
@@ -101,6 +103,7 @@ interface AnchorInput {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MAXIMUM_OFFSET_MINUTES = 14 * 60;
 const ENTRY_KINDS = new Set<EntryKind>(["hypothesis", "method", "observation", "evaluation", "conclusion", "note"]);
 const CALENDAR_URLS = new Set([
   "https://a.pool.opentimestamps.org",
@@ -138,6 +141,15 @@ function readExperimentInput(value: unknown): ExperimentInput | null {
   return title && objective ? { objective, title } : null;
 }
 
+function readOffsetMinutes(value: unknown): number | null | undefined {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  return typeof value === "number" && Number.isInteger(value) && Math.abs(value) <= MAXIMUM_OFFSET_MINUTES
+    ? value
+    : undefined;
+}
+
 function readEntryInput(value: unknown, now: Date): EntryInput | null {
   const record = readRecord(value);
   if (!record) {
@@ -146,14 +158,18 @@ function readEntryInput(value: unknown, now: Date): EntryInput | null {
   const body = readString(record, "body", 10_000);
   const occurredAt = readString(record, "occurredAt", 40);
   const kind = record.kind;
-  if (!body || !occurredAt || typeof kind !== "string" || !ENTRY_KINDS.has(kind as EntryKind)) {
+  const occurredAtOffsetMinutes = readOffsetMinutes(record.occurredAtOffsetMinutes);
+  if (
+    !body || !occurredAt || occurredAtOffsetMinutes === undefined ||
+    typeof kind !== "string" || !ENTRY_KINDS.has(kind as EntryKind)
+  ) {
     return null;
   }
   const occurred = new Date(occurredAt);
   if (Number.isNaN(occurred.getTime()) || occurred.getTime() > now.getTime() + 5 * 60 * 1_000) {
     return null;
   }
-  return { body, kind: kind as EntryKind, occurredAt: occurred.toISOString() };
+  return { body, kind: kind as EntryKind, occurredAt: occurred.toISOString(), occurredAtOffsetMinutes };
 }
 
 function readAmendmentInput(value: unknown): AmendmentInput | null {
@@ -194,20 +210,45 @@ async function sha256(value: string): Promise<string> {
   return bytesToHex(new Uint8Array(digest));
 }
 
+/**
+ * Entries recorded before the daylight saving fix carry no offset and keep the
+ * v1 preimage, so their stored hashes and the exported chain still verify. Once
+ * an offset is recorded it is part of the record and enters the v2 preimage.
+ */
 export async function canonicalEntryHash(entry: Pick<
   RdlogEntry,
-  "body" | "createdAt" | "experimentId" | "kind" | "occurredAt" | "previousHash" | "sequence"
+  | "body"
+  | "createdAt"
+  | "experimentId"
+  | "kind"
+  | "occurredAt"
+  | "occurredAtOffsetMinutes"
+  | "previousHash"
+  | "sequence"
 >): Promise<string> {
-  return sha256(JSON.stringify([
-    "rdlog-entry-v1",
-    entry.experimentId,
-    entry.kind,
-    entry.body,
-    entry.occurredAt,
-    entry.createdAt,
-    entry.previousHash,
-    entry.sequence,
-  ]));
+  const offsetMinutes = entry.occurredAtOffsetMinutes ?? null;
+  return sha256(JSON.stringify(offsetMinutes === null
+    ? [
+        "rdlog-entry-v1",
+        entry.experimentId,
+        entry.kind,
+        entry.body,
+        entry.occurredAt,
+        entry.createdAt,
+        entry.previousHash,
+        entry.sequence,
+      ]
+    : [
+        "rdlog-entry-v2",
+        entry.experimentId,
+        entry.kind,
+        entry.body,
+        entry.occurredAt,
+        offsetMinutes,
+        entry.createdAt,
+        entry.previousHash,
+        entry.sequence,
+      ]));
 }
 
 export async function canonicalAmendmentHash(
@@ -359,6 +400,7 @@ export function createApi(dependencies: ApiDependencies) {
       id: dependencies.makeId(),
       kind: input.kind,
       occurredAt: input.occurredAt,
+      occurredAtOffsetMinutes: input.occurredAtOffsetMinutes,
       previousHash: previous?.hash ?? null,
       sequence: (previous?.sequence ?? 0) + 1,
     };

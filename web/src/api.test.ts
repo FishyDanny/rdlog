@@ -54,6 +54,7 @@ describe("rdlog web API client", () => {
           id: "entry-1",
           kind: "observation",
           occurredAt: "2026-08-16T01:01:00.000Z",
+          occurredAtOffsetMinutes: 600,
           previousHash: null,
           sequence: 1,
         }, { status: 201 });
@@ -126,6 +127,7 @@ describe("rdlog web API client", () => {
       body: "Candidate returned p95 84 ms.",
       kind: "observation",
       occurredAt: "2026-08-16T01:01:00.000Z",
+      occurredAtOffsetMinutes: 600,
     });
     await saveAnchors(fetcher, "https://api.example.com", token, entry.id, [
       { calendarUrl: "https://a.pool.opentimestamps.org", receipt: "AAEC", status: "pending" },

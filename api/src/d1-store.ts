@@ -26,6 +26,7 @@ export interface D1ExperimentRow {
   entryId: string | null;
   entryKind: EntryKind | null;
   entryOccurredAt: string | null;
+  entryOccurredAtOffsetMinutes: number | null;
   entryPreviousHash: string | null;
   entrySequence: number | null;
   experimentId: string;
@@ -49,6 +50,7 @@ const EXPERIMENT_SELECT = `
     e.kind AS entryKind,
     e.body AS entryBody,
     e.occurred_at AS entryOccurredAt,
+    e.occurred_at_offset_minutes AS entryOccurredAtOffsetMinutes,
     e.created_at AS entryCreatedAt,
     e.hash AS entryHash,
     e.previous_hash AS entryPreviousHash,
@@ -86,6 +88,7 @@ function rowEntry(row: D1ExperimentRow): ExperimentView["entries"][number] | nul
     id: row.entryId,
     kind: row.entryKind,
     occurredAt: row.entryOccurredAt,
+    occurredAtOffsetMinutes: row.entryOccurredAtOffsetMinutes,
     previousHash: row.entryPreviousHash,
     sequence: row.entrySequence,
   };
@@ -175,14 +178,15 @@ export function createD1RdlogStore(database: D1Database): RdlogStore {
     async appendEntry(entry: RdlogEntry): Promise<void> {
       await database.prepare(`
         INSERT INTO rdlog_entries
-          (id, experiment_id, kind, body, occurred_at, created_at, hash, previous_hash, sequence)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, experiment_id, kind, body, occurred_at, occurred_at_offset_minutes, created_at, hash, previous_hash, sequence)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         entry.id,
         entry.experimentId,
         entry.kind,
         entry.body,
         entry.occurredAt,
+        entry.occurredAtOffsetMinutes,
         entry.createdAt,
         entry.hash,
         entry.previousHash,
@@ -217,6 +221,7 @@ export function createD1RdlogStore(database: D1Database): RdlogStore {
           kind,
           body,
           occurred_at AS occurredAt,
+          occurred_at_offset_minutes AS occurredAtOffsetMinutes,
           created_at AS createdAt,
           hash,
           previous_hash AS previousHash,
@@ -241,6 +246,7 @@ export function createD1RdlogStore(database: D1Database): RdlogStore {
           kind,
           body,
           occurred_at AS occurredAt,
+          occurred_at_offset_minutes AS occurredAtOffsetMinutes,
           created_at AS createdAt,
           hash,
           previous_hash AS previousHash,

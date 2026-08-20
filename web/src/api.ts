@@ -26,6 +26,7 @@ export interface EntryRecord {
   id: string;
   kind: EntryKind;
   occurredAt: string;
+  occurredAtOffsetMinutes: number | null;
   previousHash: string | null;
   sequence: number;
 }
@@ -65,6 +66,7 @@ export interface EntryInput {
   body: string;
   kind: EntryKind;
   occurredAt: string;
+  occurredAtOffsetMinutes: number | null;
 }
 
 export interface SubstantiationPack {
@@ -114,6 +116,8 @@ function isEntryRecord(value: unknown): value is EntryRecord {
     typeof record.occurredAt === "string" &&
     typeof record.createdAt === "string" &&
     typeof record.hash === "string" &&
+    (record.occurredAtOffsetMinutes === null || record.occurredAtOffsetMinutes === undefined ||
+      typeof record.occurredAtOffsetMinutes === "number") &&
     typeof record.sequence === "number";
 }
 

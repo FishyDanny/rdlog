@@ -5,6 +5,7 @@ export interface HashableEntry {
   hash: string;
   kind: string;
   occurredAt: string;
+  occurredAtOffsetMinutes?: number | null;
   previousHash: string | null;
   sequence: number;
 }
@@ -46,17 +47,34 @@ async function sha256(value: string): Promise<string> {
   return bytesToHex(new Uint8Array(digest));
 }
 
+/**
+ * Mirrors canonicalEntryHash in the API byte for byte. Entries without a
+ * recorded offset predate the daylight saving fix and keep the v1 preimage.
+ */
 export async function verifyEntryHash(entry: HashableEntry): Promise<boolean> {
-  const expected = await sha256(JSON.stringify([
-    "rdlog-entry-v1",
-    entry.experimentId,
-    entry.kind,
-    entry.body,
-    entry.occurredAt,
-    entry.createdAt,
-    entry.previousHash,
-    entry.sequence,
-  ]));
+  const offsetMinutes = entry.occurredAtOffsetMinutes ?? null;
+  const expected = await sha256(JSON.stringify(offsetMinutes === null
+    ? [
+        "rdlog-entry-v1",
+        entry.experimentId,
+        entry.kind,
+        entry.body,
+        entry.occurredAt,
+        entry.createdAt,
+        entry.previousHash,
+        entry.sequence,
+      ]
+    : [
+        "rdlog-entry-v2",
+        entry.experimentId,
+        entry.kind,
+        entry.body,
+        entry.occurredAt,
+        offsetMinutes,
+        entry.createdAt,
+        entry.previousHash,
+        entry.sequence,
+      ]));
   return expected === entry.hash;
 }
 

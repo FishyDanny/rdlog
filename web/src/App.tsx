@@ -18,6 +18,7 @@ import {
 import { ExperimentList } from "./experiment-list";
 import { ExperimentWorkspace } from "./experiment-workspace";
 import { anchorHashToCalendars, verifyEntryHash } from "./timestamps";
+import { resolveWallClock, toDatetimeLocal } from "./zoned-time";
 
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
@@ -57,19 +58,7 @@ export function getRouteMetadata(experimentId: string | null, title: string | nu
       };
 }
 
-export function toDatetimeLocal(date: Date, timeZone?: string): string {
-  const parts = new Intl.DateTimeFormat("en-AU", {
-    day: "2-digit",
-    hour: "2-digit",
-    hourCycle: "h23",
-    minute: "2-digit",
-    month: "2-digit",
-    timeZone,
-    year: "numeric",
-  }).formatToParts(date);
-  const read = (type: Intl.DateTimeFormatPartTypes): string => parts.find((part) => part.type === type)?.value ?? "";
-  return `${read("year")}-${read("month")}-${read("day")}T${read("hour")}:${read("minute")}`;
-}
+export { toDatetimeLocal } from "./zoned-time";
 
 export function serialisePack(pack: SubstantiationPack): SerialisedPack {
   return {
@@ -107,6 +96,7 @@ export function App() {
     body: "",
     kind: "hypothesis",
     occurredAt: toDatetimeLocal(new Date()),
+    occurredAtOffsetMinutes: null,
   }));
   const [experiment, setExperiment] = useState<ExperimentView | null>(null);
   const [experimentForm, setExperimentForm] = useState<ExperimentInput>(emptyExperimentForm);
@@ -237,9 +227,11 @@ export function App() {
     setBusy(true);
     setMessage("Saving the immutable entry, checking its hash and contacting two calendars…");
     try {
+      const occurred = resolveWallClock(entryForm.occurredAt);
       const created = await appendEntry(fetch, apiUrl, token, experiment.id, {
         ...entryForm,
-        occurredAt: new Date(entryForm.occurredAt).toISOString(),
+        occurredAt: occurred.instant,
+        occurredAtOffsetMinutes: occurred.offsetMinutes,
       });
       const verified = await verifyEntryHash(created);
       if (!verified) {

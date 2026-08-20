@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import type { EntryInput, EntryKind, ExperimentView, SubstantiationPack } from "./api";
+import { formatInViewerZone, formatRecordedTime } from "./zoned-time";
 
 export interface ExperimentWorkspaceProps {
   amendmentBodies: Record<string, string | undefined>;
@@ -31,10 +32,7 @@ function kindLabel(kind: EntryKind): string {
 }
 
 function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("en-AU", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatInViewerZone(new Date(value));
 }
 
 function shortHash(value: string | null): string {
@@ -137,7 +135,7 @@ export function ExperimentWorkspace({
               <article className="entry-card" data-testid="entry-card" key={entry.id}>
                 <header>
                   <span className="sequence">{String(entry.sequence).padStart(2, "0")}</span>
-                  <div><p>{kindLabel(entry.kind)}</p><time dateTime={entry.occurredAt}>{formatDateTime(entry.occurredAt)}</time></div>
+                  <div><p>{kindLabel(entry.kind)}</p><time dateTime={entry.occurredAt}>{formatRecordedTime(entry.occurredAt, entry.occurredAtOffsetMinutes)}</time></div>
                 </header>
                 <div className="original-record">
                   <strong>Original record — never replaced</strong>

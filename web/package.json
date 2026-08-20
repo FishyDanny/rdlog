@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm og && vite build",
+    "build": "npm run og && vite build",
     "dev": "vite",
     "og": "tsx scripts/generate-og.ts",
     "test": "vitest run",

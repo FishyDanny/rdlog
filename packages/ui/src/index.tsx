@@ -96,6 +96,5 @@ export function renderOgSvg({ eyebrow, slug, subtitle, title }: OgOptions): stri
   <text x="116" y="292" fill="${tokens.ink}" font-family="${tokens.headingFont}" font-size="78" font-weight="700">${escapeXml(title)}</text>
   <text x="116" y="390" fill="${tokens.muted}" font-family="${tokens.bodyFont}" font-size="34">${escapeXml(subtitle)}</text>
   <text x="116" y="520" fill="${tokens.primary}" font-family="${tokens.bodyFont}" font-size="25">ship72 / ${escapeXml(slug)}</text>
-</svg>
-`;
+</svg>`;
 }

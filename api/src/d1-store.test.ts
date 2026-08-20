@@ -18,6 +18,7 @@ const base: D1ExperimentRow = {
   entryId: "entry-1",
   entryKind: "observation",
   entryOccurredAt: "2026-08-16T01:00:00.000Z",
+  entryOccurredAtOffsetMinutes: 600,
   entryPreviousHash: null,
   entrySequence: 1,
   experimentId: "experiment-1",
@@ -74,6 +75,7 @@ describe("D1 rdlog row mapping", () => {
       entryId: null,
       entryKind: null,
       entryOccurredAt: null,
+      entryOccurredAtOffsetMinutes: null,
       entryPreviousHash: null,
       entrySequence: null,
     }]);

@@ -48,6 +48,7 @@ describe("browser OpenTimestamps anchoring", () => {
       hash: "pending",
       kind: "hypothesis",
       occurredAt: "2026-08-16T01:00:00.000Z",
+      occurredAtOffsetMinutes: null,
       previousHash: null,
       sequence: 1,
     };
@@ -67,5 +68,39 @@ describe("browser OpenTimestamps anchoring", () => {
 
     await expect(verifyEntryHash(entry)).resolves.toBe(true);
     await expect(verifyEntryHash({ ...entry, body: `${entry.body} changed` })).resolves.toBe(false);
+  });
+
+  test("covers the recorded daylight saving offset with the v2 canonical hash", async () => {
+    const entry: HashableEntry = {
+      body: "Replayed the trace against both layouts.",
+      createdAt: "2026-04-04T15:35:00.000Z",
+      experimentId: "id-3",
+      hash: "pending",
+      kind: "method",
+      occurredAt: "2026-04-04T15:30:00.000Z",
+      occurredAtOffsetMinutes: 660,
+      previousHash: null,
+      sequence: 1,
+    };
+    entry.hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(JSON.stringify([
+        "rdlog-entry-v2",
+        entry.experimentId,
+        entry.kind,
+        entry.body,
+        entry.occurredAt,
+        entry.occurredAtOffsetMinutes,
+        entry.createdAt,
+        entry.previousHash,
+        entry.sequence,
+      ])),
+    ).then((digest) => [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join(""));
+
+    await expect(verifyEntryHash(entry)).resolves.toBe(true);
+    // The same instant recorded under the other side of the transition is a different record.
+    await expect(verifyEntryHash({ ...entry, occurredAtOffsetMinutes: 600 })).resolves.toBe(false);
+    // Dropping the offset falls back to v1, which cannot match a v2 hash.
+    await expect(verifyEntryHash({ ...entry, occurredAtOffsetMinutes: null })).resolves.toBe(false);
   });
 });
