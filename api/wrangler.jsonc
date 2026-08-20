@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "s72-rdlog-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-15",
+  "workers_dev": true,
+  "vars": {
+    "WEB_ORIGIN": "https://s72-rdlog.pages.dev"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ship72",
+      "database_id": "f618bb0f-194a-4abf-8511-49689b6cc8d5"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /experiments/
+
+Sitemap: https://s72-rdlog.pages.dev/sitemap.xml
