@@ -11,16 +11,21 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@ship72/ui": "workspace:*",
+    "@ship72/ui": "file:../packages/ui",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.12",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.0.2",
     "sharp": "^0.34.3",
     "tailwindcss": "^4.1.12",
     "tsx": "^4.20.5",
-    "vite": "^7.1.3"
+    "typescript": "^7.0.2",
+    "vite": "^7.1.3",
+    "vitest": "^4.1.11"
   }
 }
